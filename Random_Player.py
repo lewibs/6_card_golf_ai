@@ -9,7 +9,7 @@ class Random_Player(Player):
         else:
             return Draw_Action.KNOWN
 
-    def swap_card(self):
+    def swap_card(self, card):
         indices_of_unknown = [index for index, obj in enumerate(self.game.hands[self.id]) if not obj.known]
         rand = random.randint(0,len(indices_of_unknown)-1)
         index = indices_of_unknown[rand]

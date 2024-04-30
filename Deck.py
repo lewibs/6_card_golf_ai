@@ -40,7 +40,7 @@ class Deck:
         self.discard_pile += cards
 
     def serialize(self):
-        return "{:<4} {:<4}".format(self.discard_pile[-1].serialize(), UNKNOWN)
+        return "{:<2} {:<2}".format(self.discard_pile[-1].serialize(), UNKNOWN)
 
     def draw_from_discard(self, amount=1):
         drawn_cards = []

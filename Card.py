@@ -1,8 +1,9 @@
 import torch
 
-VALUES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+VALUES = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+SCORES = [-2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 0, 1]
 SUITS = ["H", "D", "C", "S"]
-UNKNOWN = "??"
+UNKNOWN = "?"
 
 class Card:
     def __init__(self, value, suit):
@@ -18,9 +19,9 @@ class Card:
 
     def serialize(self):
         if self.known:
-            return self.value + self.suit
+            return self.value
         else:
-            return "??"
+            return UNKNOWN
 
     def one_hot(self):
         value = torch.zeros(len(VALUES))
@@ -31,4 +32,7 @@ class Card:
         known = known[self.known] = 1
 
         return torch.cat((known, suit, value))
+
+    def score(self):
+        return SCORES[VALUES.index(self.value)]
         

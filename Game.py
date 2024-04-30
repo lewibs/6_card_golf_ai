@@ -31,7 +31,7 @@ class Game:
     
     def serialized_hand(self, player):
         cards = [card.serialize() for card in self.hands[player]]
-        return "{:<4} {:<4} {:<4}\n{:<4} {:<4} {:<4}".format(*cards)
+        return "{:<2} {:<2} {:<2}\n{:<2} {:<2} {:<2}".format(*cards)
 
     def serialize(self):
         string = ""
@@ -58,6 +58,36 @@ class Game:
     #this flips a unknown card into discard
     def draw_card(self):
         self.deck.discard(*self.deck.deal_cards())
+
+    def serialize_scores(self):
+        scores = [(player, self.score_hand(player)) for player in range(len(self.hands))]
+        scores = sorted(scores, key=lambda x: x[1])
+
+        ret = ""
+
+        for score in scores:
+            if score[0] == 0:
+                ret += f"You: {score[1]}\n"
+            else:
+                ret += f"Player {score[0]+1}: {score[1]}\n"
+
+        return ret
+
+
+    def score_hand(self, player):
+        score = 0
+
+        for i in range(3):
+            a = self.hands[player][i]
+            b = self.hands[player][i+3]
+
+            if a.value == b.value:
+                score += 0
+            else:
+                score += sum([a.score(), b.score()])
+
+        return score
+
 
 def run_game(players):
     rules = """
@@ -119,7 +149,7 @@ def run_game(players):
 
         if action == Swap_Action.SWAP:
             print("Which card would you like to swap it with?")
-            index = players[player].swap_card()
+            index = players[player].swap_card(card)
             print(f"Swapping card {index}")
             game.swap_player_card(player, index, card)
         else:
@@ -130,6 +160,8 @@ def run_game(players):
             game.show_player_card(player, index)
 
     print(game.serialize())
+    print(game.serialize_scores())
+
 
 
 
