@@ -29,7 +29,7 @@ def format_draw_action(action, eps, prediction=torch.zeros(1)):
 
 
 def start_training():
-    n_games = 50
+    n_games = 1
     batch_size = 10 #TODO maybe make this the number of turns?
     gamma = 0.99
     eps_start = 1.0
@@ -79,6 +79,8 @@ def start_training():
                 flip_card_memory.push(state, prediction1, state1, flip1_reward)
                 flip2_reward = torch.tensor([1])
                 flip_card_memory.push(state1, prediction2, state2, flip2_reward)
+
+                
                 next_state = state2
                 state = state2
 
@@ -108,13 +110,10 @@ def start_training():
 
             #IF player is player 0 then save the stuff to add to memory in the next step
 
-            print(player)
             if player == 0:
-                print(player)
                 next_state = game.encode()
 
                 #push changes to memory
-                print(draw_action_reward)
                 draw_action_memory.push(state, draw_action, next_state, draw_action_reward)
 
                 state = next_state
@@ -126,6 +125,15 @@ def start_training():
                     policy=draw_action_policy_net,
                     target=draw_action_target_net,
                     memory=draw_action_memory,
+                    batch_size=batch_size,
+                    gamma=gamma,
+                )
+
+                optimize_model(
+                    optimizer=flip_card_optimizer,
+                    policy=flip_card_policy_net,
+                    target=flip_card_target_net,
+                    memory=flip_card_memory,
                     batch_size=batch_size,
                     gamma=gamma,
                 )
