@@ -157,12 +157,18 @@ A pair of equal cards in the same column scores zero points for the column (even
         return game
 
     @staticmethod
-    def flip_2_cards_step(game, player):
+    #TODO i dont love this one since its explicitly returning non game info
+    def flip_2_cards_step(game, player, prediction1, prediction2):
         if game.log:
             print("Flip two cards...")
 
-        game.show_player_card(player, game.players[player].show_card())
-        game.show_player_card(player, game.players[player].show_card())
+        game.show_player_card(player, game.players[player].show_card(prediction1))
+        state1 = game.encode()
+        game.show_player_card(player, game.players[player].show_card(prediction2))
+        state2 = game.encode()
+
+        return (state1, state2)
+
 
     @staticmethod
     def draw_card_step(game, player, prediction=torch.zeros(1), format_action=None):

@@ -1,7 +1,7 @@
 import torch
 
 VALUES = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-ENCODED_VALUES = [1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 2, 3]
+ENCODED_VALUES = [1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 2, 3] #0 means unknown
 SCORES = [-2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 0, 1]
 SUITS = ["H", "D", "C", "S"]
 UNKNOWN = "?"
@@ -31,7 +31,11 @@ class Card:
         return out
 
     def encode(self):
-        return torch.tensor([ENCODED_VALUES[VALUES.index(self.value)]])
+        if self.known:
+            return torch.tensor([ENCODED_VALUES[VALUES.index(self.value)]])
+        else:
+            return torch.tensor([0])
+
 
     def score(self):
         return SCORES[VALUES.index(self.value)]
