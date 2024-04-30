@@ -1,6 +1,7 @@
 import torch
 
 VALUES = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+ENCODED_VALUES = [1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 2, 3]
 SCORES = [-2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 0, 1]
 SUITS = ["H", "D", "C", "S"]
 UNKNOWN = "?"
@@ -24,14 +25,13 @@ class Card:
             return UNKNOWN
 
     def one_hot(self):
-        value = torch.zeros(len(VALUES))
-        value[VALUES.index(self.value)] = 1
-        suit = torch.zeros(len(SUITS))
-        suit[SUITS.index(self.suit)] = 1
-        known = torch.zeros([2])
-        known = known[self.known] = 1
+        index = VALUES.index(self.value)
+        out = torch.zeros(len(VALUES))
+        out[index] = 1
+        return out
 
-        return torch.cat((known, suit, value))
+    def encode(self):
+        return torch.tensor([ENCODED_VALUES[VALUES.index(self.value)]])
 
     def score(self):
         return SCORES[VALUES.index(self.value)]

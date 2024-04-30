@@ -1,16 +1,15 @@
 from Player import Player
-import random
 from Game import Draw_Action, Swap_Action
 
 class User_Player(Player):
-    def draw_card(self):
+    def draw_card(self, prediction=None):
         card = self.game.deck.discard_pile[-1].serialize()
         if int(input(f"0 to use the {card}, or 1 to draw from the deck: ")):
             return Draw_Action.RANDOM
         else:
             return Draw_Action.KNOWN
 
-    def swap_card(self, card):
+    def swap_card(self, card, prediction=None):
         while True:
             index = int(input("Enter number 1-6: ")) - 1
 
@@ -27,7 +26,7 @@ class User_Player(Player):
             else:
                 print("This index corresponds to a known card. Please choose an unknown card.")
 
-    def show_card(self):
+    def show_card(self, prediction=None):
         while True:
             index = int(input("Enter number 1-6: ")) - 1
 
@@ -44,7 +43,7 @@ class User_Player(Player):
             else:
                 print("This index corresponds to a known card. Please choose an unknown card.")
 
-    def swap_or_flip(self):
+    def swap_or_flip(self, card, prediction=None):
         if int(input("1 to swap, or 0 to flip: ")):
             return Swap_Action.SWAP
         else:

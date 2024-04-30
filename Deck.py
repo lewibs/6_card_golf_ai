@@ -13,6 +13,8 @@ class Deck:
             for value in VALUES:
                 self.deck.append(Card(value, suit))
 
+        self.shuffle()
+
     def shuffle(self):
         # Shuffle the deck
         random.shuffle(self.deck)
@@ -48,10 +50,13 @@ class Deck:
             drawn_cards.append(self.discard_pile.pop())
         return drawn_cards
 
+    def encode(self):
+        if not self.discard_pile:
+            discarded = torch.zeros((0,))  # Return an empty tensor if discard pile is empty
+        else:
+            discarded = torch.cat([card.encode() for card in self.discard_pile])
+        unknown = torch.zeros(len(self.deck))
+        return torch.cat((discarded, unknown))
 
     def __len__(self):
         return len(self.deck)
-
-    def __str__(self):
-        # String representation of the deck
-        return f"Deck of {len(self.deck)} cards"

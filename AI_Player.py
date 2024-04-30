@@ -1,13 +1,29 @@
 from Player import Player
-import random
 from Game import Draw_Action, Swap_Action
+import random
+import torch
+from Draw_Action_Model import DrawActionModel, DRAW_ACTION_WEIGHTS
 
-class Random_Player(Player):
-    def draw_card(self, prediction=None):
-        if random.randint(0,1):
+class AI_Player(Player):
+
+    def __init__(self, id, game):
+        super().__init__(id, game)
+
+        self.draw_action = DrawActionModel()
+
+        try:
+            self.draw_action.load_state_dict(torch.load(DRAW_ACTION_WEIGHTS))
+        except:
+            print("[WARNING] Unable to load weights for drawing action")
+
+    def draw_card(self, prediction=torch.zeros(1)):
+        prediction[0] = self.draw_action(self.game.encode()).item()
+        
+        if prediction < 0:
             return Draw_Action.RANDOM
         else:
             return Draw_Action.KNOWN
+
 
     def swap_card(self, card, prediction=None):
         indices_of_unknown = [index for index, obj in enumerate(self.game.hands[self.id]) if not obj.known]

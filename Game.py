@@ -11,22 +11,29 @@ class Swap_Action(Enum):
     FLIP = "flip"
 
 class Game:
+    log=True
+    players=[]
+    hands=[]
+
     def __init__(self, players):
-        self.deck = Deck()
+        self.players = players
 
-        self.deck.shuffle()
-        self.deck.discard(*self.deck.deal_cards(1))
+        self.reset()
 
-        # [1,2,3
-        # 4,5,6]
-        self.hands = [[] for player in range(players)]
+        self.players = [Player(i, self) for i, Player in enumerate(players)]
 
-        for player in range(players):
-            delt = self.deck.deal_cards(6)
-            self.hands[player] = delt 
+    def encode(self):
+        game = torch.tensor([])
+        
+        for i in range(len(self.hands)):
+            game = torch.cat((game, self.encode_hand(i)))
 
-    def one_hot_hand(self, player):
-        cards = torch.stack([card.one_hot() for card in self.hands[player]])
+        game = torch.cat((game, self.deck.encode()))
+        
+        return game
+
+    def encode_hand(self, player):
+        cards = torch.cat([card.encode() for card in self.hands[player]])
         return cards
     
     def serialized_hand(self, player):
@@ -88,79 +95,160 @@ class Game:
 
         return score
 
+    def is_done(self):
+        hands = []
 
-def run_game(players):
-    rules = """
-        Ready to play 6 card golf?
+        for hand in self.hands:
+            hands.append(all(card.known for card in hand))
 
-        THE PACK
-        Standard 52 card deck
+        return all(hands)
 
-        THE DEAL
-        Each player is dealt 6 cards face down from the deck. The remainder of the cards are placed face down, and the top card is turned up to start the discard pile beside it. Players arrange their 6 cards in 2 rows of 3 in front of them and turn 2 of these cards face up. The remaining cards stay face down and cannot be looked at.
+    def reset(self):
+        player_count = len(self.players)
 
-        THE PLAY
-        The object is for players to have the lowest value of the cards in front of them by either swapping them for lesser value cards or by pairing them up with cards of equal rank.
+        self.deck = Deck()
 
-        Beginning with the player to the dealer's left, players take turns drawing single cards from either the stock or discard piles. The drawn card may either be swapped for one of that player's 6 cards, or discarded. If the card is swapped for one of the face down cards, the card swapped in remains face up. The round ends when all of a player's cards are face-up.
+        self.deck.shuffle()
+        self.deck.discard(*self.deck.deal_cards(1))
 
-        A game is nine "holes" (deals), and the player with the lowest total score is the winner.
+        # [1,2,3
+        # 4,5,6]
+        self.hands = [[] for player in range(player_count)]
 
-        SCORING
-        Each ace counts 1 point.
-        Each 2 counts minus 2 points.
-        Each numeral card from 3 to 10 scores face value.
-        Each jack or queen scores 10 points.
-        Each king scores zero points.
-        A pair of equal cards in the same column scores zero points for the column (even if the equal cards are 2s).
-    """
+        for player in range(player_count):
+            delt = self.deck.deal_cards(6)
+            self.hands[player] = delt
 
-    print(rules)
-    
-    game = Game(len(players))
 
-    players = [Player(i, game) for i, Player in enumerate(players)]
 
-    print("Flip two cards...")
+    @staticmethod
+    def initialize(players, log=True):
+        rules = """
+Ready to play 6 card golf?
 
-    for i in range(len(players)):
-        game.show_player_card(i, players[i].show_card())
-        game.show_player_card(i, players[i].show_card())
+THE PACK
+Standard 52 card deck
 
-    print(game.serialize())
+THE DEAL
+Each player is dealt 6 cards face down from the deck. The remainder of the cards are placed face down, and the top card is turned up to start the discard pile beside it. Players arrange their 6 cards in 2 rows of 3 in front of them and turn 2 of these cards face up. The remaining cards stay face down and cannot be looked at.
 
-    for i in range(len(players) * 4):
-        print(game.serialize())
-        player = i % len(players)
+THE PLAY
+The object is for players to have the lowest value of the cards in front of them by either swapping them for lesser value cards or by pairing them up with cards of equal rank.
 
-        print("Draw a card:")
-        action = players[player].draw_card()
+Beginning with the player to the dealer's left, players take turns drawing single cards from either the stock or discard piles. The drawn card may either be swapped for one of that player's 6 cards, or discarded. If the card is swapped for one of the face down cards, the card swapped in remains face up. The round ends when all of a player's cards are face-up.
+
+A game is nine "holes" (deals), and the player with the lowest total score is the winner.
+
+SCORING
+Each ace counts 1 point.
+Each 2 counts minus 2 points.
+Each numeral card from 3 to 10 scores face value.
+Each jack or queen scores 10 points.
+Each king scores zero points.
+A pair of equal cards in the same column scores zero points for the column (even if the equal cards are 2s).
+        """
+
+        game = Game(players)
+        game.log = log
+
+        if game.log:
+            print(rules)
+
+        return game
+
+    @staticmethod
+    def flip_2_cards_step(game, player):
+        if game.log:
+            print("Flip two cards...")
+
+        game.show_player_card(player, game.players[player].show_card())
+        game.show_player_card(player, game.players[player].show_card())
+
+    @staticmethod
+    def draw_card_step(game, player, prediction=torch.zeros(1), format_action=None):
+        if game.log:
+            print(game.serialize())
+
+        if game.log:
+            print("Draw a card:")
+
+        action = game.players[player].draw_card(prediction)
+        if format_action:
+            action = format_action(action, prediction)
+
 
         if action == Draw_Action.RANDOM:
             game.draw_card()
 
         card = game.deck.draw_from_discard(1)[0]
         
-        print(f"The card is a {card.serialize()}\n")
+        if game.log:
+            print(f"The card is a {card.serialize()}\n")
 
-        print("Would you like replace a unknown card, or flip a unknown card?")
-        action = players[player].swap_or_flip()
-        print(f"You chose to {action.value}\n")
+        return card
+
+    @staticmethod
+    def replace_or_flip_step(game, player, card):
+        if game.log:
+            print("Would you like replace a unknown card, or flip a unknown card?")
+
+        action = game.players[player].swap_or_flip(card)
+        
+        if game.log:
+            print(f"You chose to {action.value}\n")
+
+        return action
+
+    @staticmethod
+    def swap_card_step(game, player, card):
+        if game.log:
+            print("Which card would you like to swap it with?")
+        
+        index = game.players[player].swap_card(card)
+        
+        if game.log:
+            print(f"Swapping card {index}")
+
+        game.swap_player_card(player, index, card)
+
+    @staticmethod
+    def flip_card_step(game, player, card):
+        if game.log:
+            print("Which card would you like to flip instead?")
+        
+        game.deck.discard(card)
+        index = game.players[player].show_card()
+        
+        if game.log:
+            print(f"Flipping card {index}")
+        
+        game.show_player_card(player, index)
+
+    @staticmethod
+    def finalize_game(game):
+        if game.log:
+            print(game.serialize())
+            print("FINAL SCORES:")
+            print(game.serialize_scores())
+
+def run_game(players, log = False):
+    game = Game.initialize(players)
+
+    for i in range(len(players)):
+        Game.flip_2_cards_step(game, i)
+
+    for i in range(len(players) * 4):
+        player = i % len(players)
+        card = Game.draw_card_step(game, player)
+
+        action = Game.replace_or_flip_step(game, player, card)
 
         if action == Swap_Action.SWAP:
-            print("Which card would you like to swap it with?")
-            index = players[player].swap_card(card)
-            print(f"Swapping card {index}")
-            game.swap_player_card(player, index, card)
+            Game.swap_card_step(game, player, card)
         else:
-            print("Which card would you like to flip instead?")
-            game.deck.discard(card)
-            index = players[player].show_card()
-            print(f"Flipping card {index}")
-            game.show_player_card(player, index)
+            Game.flip_card_step(game, player, card)
 
-    print(game.serialize())
-    print(game.serialize_scores())
+    Game.finalize_game(game)
 
 
 
