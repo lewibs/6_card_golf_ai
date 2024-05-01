@@ -146,53 +146,15 @@ def draw_reward(action, card, game_encoded):
 
 def format_draw_action(action, eps, prediction=torch.zeros(1)):
     return action
-    sample = random.random()
-    
-    if sample > eps:
-        return action
-    else:
-        prediction[0] = random.uniform(-1, 1)
-
-        # this is the same as the draw action dont change
-        if prediction.item() < 0:
-            return Draw_Action.RANDOM
-        else:
-            return Draw_Action.KNOWN
 
 def format_flip_action(action, eps, prediction=torch.zeros(6)):
     return action
-    sample = random.random()
-    
-    if sample > eps:
-        return action
-    else:
-        #TODO return a random index instead of whatever they already did
-        return action
 
 def format_swap_action(action, eps, prediction=torch.zeros(6)):
     return action
-    sample = random.random()
-    
-    if sample > eps:
-        return action
-    else:
-        #TODO return a random index instead of whatever they already did
-        return action
 
 def format_replace_or_flip_action(action, eps, prediction=torch.zeros(1)):
     return action
-    sample = random.random()
-    
-    if sample > eps:
-        return action
-    else:
-        prediction[0] = random.uniform(-1, 1)
-
-        # this is the same as the replace or flip action dont change
-        if prediction > 0:
-            return Swap_Action.SWAP
-        else:
-            return Swap_Action.FLIP
 
 def start_training():
     n_games = 100

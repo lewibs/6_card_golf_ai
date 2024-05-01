@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from Card_Predictor_Model import card_predictor
-from Card import ENCODED_VALUES
+from Card import ENCODED_VALUES, Card
 
 SWAP_CARD_WEIGHTS = "./weights/Swap_Card.pth"
 
@@ -29,5 +29,28 @@ class SwapCardModel(nn.Module):
         x = x * mask
         x = x + mask
 
-        # print(x, own_deck, current_card.item())
+        pairs = []
+
+
+        if Card.static_score(Card.decode(int(current_card.item()))) >= 0:
+            for i in range(3):
+                a = int(own_deck[i].item())
+                b = int(own_deck[i+3].item())
+                c = int(current_card.item())
+
+                if a != 0 and b == 0:
+                    if a == c:
+                        pairs.append(i+3)
+                elif a == 0 and b != 0:
+                    if b == c:
+                        pairs.append(i)
+
+        mask = torch.zeros(6)  # Assuming a tensor with 6 columns
+
+        for p in pairs:
+            mask[p] = 1
+
+        x = x * mask
+        x = x + mask
+
         return x
