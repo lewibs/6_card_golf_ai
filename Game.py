@@ -22,13 +22,20 @@ class Game:
 
         self.players = [Player(i, self) for i, Player in enumerate(players)]
 
-    def encode(self):
+    def encode(self, card=None):
         game = torch.tensor([])
         
         for i in range(len(self.hands)):
             game = torch.cat((game, self.encode_hand(i)))
 
         game = torch.cat((game, self.deck.encode()))
+
+        if card:
+            card = card.encode()
+            game = torch.cat((game, torch.zeros(1)))
+            index = len(self.deck.discard_pile)
+            index = (len(self.hands) * 6) + index 
+            game[index] = card
         
         return game
 

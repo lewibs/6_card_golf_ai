@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from collections import namedtuple
 import random
+from AI_Player import AI_Player
 
 Transition = namedtuple("Transition", ("state", "action", "next_state", "reward"))
 
@@ -69,21 +70,24 @@ def optimize_model(
     non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
 
     state_batch = torch.cat(batch.state)
-    action_batch = torch.cat(batch.action)
+    action_batch = torch.stack([AI_Player.index_from_prediction(prediction) for prediction in batch.action])
     reward_batch = torch.cat(batch.reward)
 
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken. These are the actions which would've been taken
     # for each batch state according to policy
-    state_action_values = policy(state_batch).gather(1, action_batch)
-
+    state_action_values = torch.stack([policy(state) for state in state_batch])
+    #TODO it looks like there may be an issue here where the index that is used to get the max is not acctually getting the max value
+    state_action_values = state_action_values.gather(1, action_batch)
+    
     # Compute V(s_{t+1}) for all next states.
     # Expected values of actions for non_final_next_states are computed based
     # on the "older" target_net; selecting their best reward with max(1)[0].
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
     next_state_values = torch.zeros(batch_size)
-    next_state_values[non_final_mask] = target(non_final_next_states).max(1)[0].detach()
+    states = torch.stack([target(state) for state in state_batch])
+    next_state_values[non_final_mask] = states.max(1)[0].detach()
     # Compute the expected Q values
     expected_state_action_values = (next_state_values * gamma) + reward_batch
 

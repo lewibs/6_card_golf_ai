@@ -47,25 +47,27 @@ class AI_Player(Player):
 
 
     def swap_card(self, card, prediction=None):
-        pred = self.swap_card_action(self.game.encode(), card.encode())
+        pred = self.swap_card_action(self.game.encode(card))
         for i, item in enumerate(pred):
             prediction[i] = item
         
-        index = torch.argmax(prediction).item()
-        print(index)
-        return index
+        return AI_Player.index_from_prediction(prediction).item()
 
     def show_card(self, prediction=torch.zeros(6)):
         pred = self.flip_action(self.game.encode())
         for i, item in enumerate(pred):
             prediction[i] = item
         
-        return torch.argmax(prediction).item()
+        return AI_Player.index_from_prediction(prediction).item()
 
     def swap_or_flip(self, card, prediction=torch.zeros([1])):
-        prediction[0] = self.replace_or_flip_action(self.game.encode(), card.encode()).item()
+        prediction[0] = self.replace_or_flip_action(self.game.encode(card)).item()
 
         if prediction > 0:
             return Swap_Action.SWAP
         else:
             return Swap_Action.FLIP
+        
+    @staticmethod
+    def index_from_prediction(prediction):
+        return torch.argmax(prediction).unsqueeze(0)

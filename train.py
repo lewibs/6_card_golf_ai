@@ -61,9 +61,8 @@ def format_replace_or_flip_action(action, eps, prediction=torch.zeros(1)):
         else:
             return Draw_Action.KNOWN
 
-
 def start_training():
-    n_games = 1
+    n_games = 50
     batch_size = 10 #TODO maybe make this the number of turns?
     gamma = 0.99
     eps_start = 1.0
@@ -132,9 +131,9 @@ def start_training():
             if i == 0:
                 #TODO
                 flip1_reward = torch.tensor([1])
-                flip_card_memory.push(state, prediction1, state1, flip1_reward)
+                flip_card_memory.push(state.unsqueeze(0), prediction1.unsqueeze(0), state1.unsqueeze(0), flip1_reward)
                 flip2_reward = torch.tensor([1])
-                flip_card_memory.push(state1, prediction2, state2, flip2_reward)
+                flip_card_memory.push(state1.unsqueeze(0), prediction2.unsqueeze(0), state2.unsqueeze(0), flip2_reward)
                 next_state = state2
                 state = state2
 
@@ -205,15 +204,15 @@ def start_training():
                 next_state = game.encode()
 
                 #push changes to memory
-                draw_action_memory.push(state, draw_action, next_state, draw_action_reward)
+                draw_action_memory.push(state.unsqueeze(0), draw_action.unsqueeze(0), next_state.unsqueeze(0), draw_action_reward)
 
                 if flip_card_action is not None:
-                    flip_card_memory.push(state, flip_card_action, next_state, flip_card_reward)
+                    flip_card_memory.push(state.unsqueeze(0), flip_card_action.unsqueeze(0), next_state.unsqueeze(0), flip_card_reward)
 
                 if swap_card_action is not None:
-                    swap_card_memory.push(state, swap_card_action, next_state, swap_card_reward)
+                    swap_card_memory.push(state.unsqueeze(0), swap_card_action.unsqueeze(0), next_state.unsqueeze(0), swap_card_reward)
 
-                replace_or_flip_memory.push(state, replace_or_flip_action, next_state, replace_or_flip_reward)
+                replace_or_flip_memory.push(state.unsqueeze(0), replace_or_flip_action.unsqueeze(0), next_state.unsqueeze(0), replace_or_flip_reward)
 
                 state = next_state
 
