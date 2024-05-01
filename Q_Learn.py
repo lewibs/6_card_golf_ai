@@ -52,7 +52,7 @@ def optimize_model(
         gamma {float} -- Reward discount factor
     """
     if len(memory) < batch_size:
-        return
+        return 1
     
     transitions = memory.sample(batch_size)
     # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
@@ -102,3 +102,5 @@ def optimize_model(
     for param in policy.parameters():
         param.grad.data.clamp_(-1, 1)
     optimizer.step()
+
+    return loss.item()

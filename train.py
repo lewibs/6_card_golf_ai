@@ -1,5 +1,4 @@
 import torch
-from Card import ENCODED_VALUES
 from Game import Game
 import torch.optim as optim
 from Q_Learn import ReplayMemory
@@ -14,6 +13,7 @@ from Random_Player import Random_Player
 from Game import Swap_Action, Draw_Action
 import random
 from Q_Learn import optimize_model
+import matplotlib.pyplot as plt
 
 def format_draw_action(action, eps, prediction=torch.zeros(1)):
     sample = random.random()
@@ -55,11 +55,11 @@ def format_replace_or_flip_action(action, eps, prediction=torch.zeros(1)):
     else:
         prediction[0] = random.uniform(-1, 1)
 
-        # this is the same as the draw action dont change
-        if prediction.item() < 0:
-            return Draw_Action.RANDOM
+        # this is the same as the replace or flip action dont change
+        if prediction > 0:
+            return Swap_Action.SWAP
         else:
-            return Draw_Action.KNOWN
+            return Swap_Action.FLIP
 
 def start_training():
     n_games = 50
@@ -69,6 +69,11 @@ def start_training():
     eps_end = 0.1
     eps_steps = 2000
     memory = 1000
+
+    draw_action_losses = []
+    flip_card_losses = []
+    swap_card_losses = []
+    replace_or_flip_losses = []
    
     draw_action_policy_net = DrawActionModel()
     draw_action_target_net = DrawActionModel()
@@ -216,9 +221,11 @@ def start_training():
 
                 state = next_state
 
+                loss = []
+
                 # Optimize models here:
                 # Go through memory and make updates based on that
-                optimize_model(
+                loss_draw = optimize_model(
                     optimizer=draw_action_optimizer,
                     policy=draw_action_policy_net,
                     target=draw_action_target_net,
@@ -226,8 +233,10 @@ def start_training():
                     batch_size=batch_size,
                     gamma=gamma,
                 )
+                draw_action_losses.append(loss_draw)
+                loss.append(loss_draw)
 
-                optimize_model(
+                loss_flip = optimize_model(
                     optimizer=flip_card_optimizer,
                     policy=flip_card_policy_net,
                     target=flip_card_target_net,
@@ -235,8 +244,10 @@ def start_training():
                     batch_size=batch_size,
                     gamma=gamma,
                 )
+                flip_card_losses.append(loss_flip)
+                loss.append(loss_flip)
 
-                optimize_model(
+                loss_swap = optimize_model(
                     optimizer=swap_card_optimizer,
                     policy=swap_card_policy_net,
                     target=swap_card_target_net,
@@ -244,8 +255,10 @@ def start_training():
                     batch_size=batch_size,
                     gamma=gamma,
                 )
+                swap_card_losses.append(loss_swap)
+                loss.append(loss_swap)
 
-                optimize_model(
+                loss_replace_or_flip = optimize_model(
                     optimizer=replace_or_flip_optimizer,
                     policy=replace_or_flip_policy_net,
                     target=replace_or_flip_target_net,
@@ -253,7 +266,10 @@ def start_training():
                     batch_size=batch_size,
                     gamma=gamma,
                 )
+                replace_or_flip_losses.append(loss_replace_or_flip)
+                loss.append(loss_replace_or_flip)
 
+        print("Losses: Draw_Action_Model={:<.4f} Flip_Card_Model={:<.4f} Swap_Card_Model={:<.4f} Replace_Or_Flip_Model={:<.4f}".format(*loss))
         Game.finalize_game(game)
         game.reset()
 
@@ -261,6 +277,17 @@ def start_training():
     torch.save(flip_card_policy_net.state_dict(), FLIP_CARD_WEIGHTS)
     torch.save(replace_or_flip_policy_net.state_dict(), REPLACE_OR_FLIP_WEIGHTS)
     torch.save(swap_card_policy_net.state_dict(), SWAP_CARD_WEIGHTS)
+
+    plt.plot(draw_action_losses, label='Draw Action Model')
+    plt.plot(flip_card_losses, label='Flip Card Model')
+    plt.plot(swap_card_losses, label='Swap Card Model')
+    plt.plot(replace_or_flip_losses, label='Replace Or Flip Model')
+
+    plt.xlabel('Iterations')
+    plt.ylabel('Loss')
+    plt.title('Losses for each Model')
+    plt.legend()
+    plt.show()
 
 if __name__ == "__main__":
     start_training()
