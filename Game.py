@@ -36,7 +36,13 @@ class Game:
             index = len(self.deck.discard_pile)
             index = (len(self.hands) * 6) + index 
             game[index] = card
-        
+        else:
+            index = len(self.deck.discard_pile)
+            index = (len(self.hands) * 6) + index 
+            card = game[index-1]
+
+        #add the on deck card to the back so that it is always in a known location. THis may help with ai understanding which card they are swapping things with
+        game = torch.cat((game, torch.tensor([card])))
         return game
 
     def encode_hand(self, player):
@@ -49,15 +55,15 @@ class Game:
 
     def serialize(self):
         string = ""
-        for i in range(len(self.hands), 1, -1):
+        for i in range(len(self.hands), 0, -1):
             string += f"Player {i}:\n"
             string += f"{self.serialized_hand(i-1)}\n\n"
 
         string += "Deck:\n"
         string += f"{self.deck.serialize()}\n\n"
 
-        string += "You:\n"
-        string += f"{self.serialized_hand(0)}\n" 
+        # string += "Player 1:\n"
+        # string += f"{self.serialized_hand(0)}\n" 
 
         return string
 
@@ -80,10 +86,7 @@ class Game:
         ret = ""
 
         for score in scores:
-            if score[0] == 0:
-                ret += f"You: {score[1]}\n"
-            else:
-                ret += f"Player {score[0]+1}: {score[1]}\n"
+            ret += f"Player {score[0]+1}: {score[1]}\n"
 
         return ret
 

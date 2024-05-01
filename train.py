@@ -404,7 +404,7 @@ def start_training():
     random_score = []
 
     print("Running games for benchmark")
-    for i in range(1000):
+    for i in range(100):
         ai, random = run_game([AI_Player, Random_Player], log=False)
         ai_score.append(ai)
         random_score.append(random)

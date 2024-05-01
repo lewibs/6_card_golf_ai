@@ -17,8 +17,11 @@ class FlipCardModel(nn.Module):
         self.fc3 = nn.Linear(32, 6)  # Output size is 6 for optimal card picking
 
     def forward(self, game_encoded):
-        card_predictions = self.card_predictor(game_encoded)
+        card_predictions = self.card_predictor(game_encoded[:52])
         own_deck = game_encoded[:6]
+        current_card = torch.tensor([game_encoded[-1]])
+        #we dont need to use current card here since the model is not affected by that since it doesnt need to take the current
+        #card into accoutn since its randomly picking one
         combined_inputs = torch.cat((card_predictions, own_deck))
 
         x = self.fc1(combined_inputs)
