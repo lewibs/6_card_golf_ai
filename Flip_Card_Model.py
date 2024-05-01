@@ -12,8 +12,8 @@ class FlipCardModel(nn.Module):
         self.card_predictor = card_predictor
         # Define additional layers for combining inputs and CardPredictor output
         # encoded values, deck, card
-        self.fc1 = nn.Linear(len(ENCODED_VALUES) + 6, 64)
-        self.fc2 = nn.Linear(64, 32)
+        self.fc1 = nn.Linear(len(ENCODED_VALUES) + 6, 100)
+        self.fc2 = nn.Linear(100, 32)
         self.fc3 = nn.Linear(32, 6)  # Output size is 6 for optimal card picking
 
     def forward(self, game_encoded):

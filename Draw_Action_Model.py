@@ -11,8 +11,8 @@ class DrawActionModel(nn.Module):
         super(DrawActionModel, self).__init__()
         self.card_predictor = card_predictor
         # Define additional layers for combining inputs and CardPredictor output
-        self.fc1 = nn.Linear(6 + len(ENCODED_VALUES) + 1, 64)
-        self.fc2 = nn.Linear(64, 32)
+        self.fc1 = nn.Linear(6 + len(ENCODED_VALUES) + 1, 100)
+        self.fc2 = nn.Linear(100, 32)
         self.fc3 = nn.Linear(32, 1)  # Output size is 1 for the draw action
 
     def forward(self, game_encoded):
