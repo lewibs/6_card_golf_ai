@@ -86,7 +86,7 @@ def optimize_model(
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
     next_state_values = torch.zeros(batch_size)
-    states = torch.stack([target(state) for state in state_batch])
+    states = torch.stack([target(state) for state in non_final_next_states])
     next_state_values[non_final_mask] = states.max(1)[0].detach()
     # Compute the expected Q values
     expected_state_action_values = (next_state_values * gamma) + reward_batch

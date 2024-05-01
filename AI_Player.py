@@ -46,7 +46,7 @@ class AI_Player(Player):
             return Draw_Action.KNOWN
 
 
-    def swap_card(self, card, prediction=None):
+    def swap_card(self, card, prediction=torch.zeros(6)):
         pred = self.swap_card_action(self.game.encode(card))
         for i, item in enumerate(pred):
             prediction[i] = item

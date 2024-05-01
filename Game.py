@@ -215,16 +215,18 @@ A pair of equal cards in the same column scores zero points for the column (even
         return action
 
     @staticmethod
-    def swap_card_step(game, player, card):
+    def swap_card_step(game, player, card, prediction, format_action=None):
         if game.log:
             print("Which card would you like to swap it with?")
         
-        index = game.players[player].swap_card(card)
+        action = game.players[player].swap_card(card)
+        if format_action:
+            action = format_action(action, prediction)
         
         if game.log:
-            print(f"Swapping card {index}")
+            print(f"Swapping card {action}")
 
-        game.swap_player_card(player, index, card)
+        game.swap_player_card(player, action, card)
 
     @staticmethod
     def flip_card_step(game, player, card, prediction, format_action=None):
