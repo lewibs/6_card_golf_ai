@@ -194,11 +194,13 @@ A pair of equal cards in the same column scores zero points for the column (even
         return card
 
     @staticmethod
-    def replace_or_flip_step(game, player, card):
+    def replace_or_flip_step(game, player, card, prediction=torch.zeros(1), format_action=None):
         if game.log:
             print("Would you like replace a unknown card, or flip a unknown card?")
 
-        action = game.players[player].swap_or_flip(card)
+        action = game.players[player].swap_or_flip(card, prediction)
+        if format_action:
+            action = format_action(action, prediction)
         
         if game.log:
             print(f"You chose to {action.value}\n")
@@ -218,17 +220,19 @@ A pair of equal cards in the same column scores zero points for the column (even
         game.swap_player_card(player, index, card)
 
     @staticmethod
-    def flip_card_step(game, player, card):
+    def flip_card_step(game, player, card, prediction, format_action=None):
         if game.log:
             print("Which card would you like to flip instead?")
         
         game.deck.discard(card)
-        index = game.players[player].show_card()
+        action = game.players[player].show_card(prediction)
+        if format_action:
+            action = format_action(action, prediction)
         
         if game.log:
-            print(f"Flipping card {index}")
+            print(f"Flipping card {action}")
         
-        game.show_player_card(player, index)
+        game.show_player_card(player, action)
 
     @staticmethod
     def finalize_game(game):
