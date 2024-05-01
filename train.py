@@ -145,6 +145,7 @@ def draw_reward(action, card, game_encoded):
 
 
 def format_draw_action(action, eps, prediction=torch.zeros(1)):
+    return action
     sample = random.random()
     
     if sample > eps:
@@ -159,6 +160,7 @@ def format_draw_action(action, eps, prediction=torch.zeros(1)):
             return Draw_Action.KNOWN
 
 def format_flip_action(action, eps, prediction=torch.zeros(6)):
+    return action
     sample = random.random()
     
     if sample > eps:
@@ -168,6 +170,7 @@ def format_flip_action(action, eps, prediction=torch.zeros(6)):
         return action
 
 def format_swap_action(action, eps, prediction=torch.zeros(6)):
+    return action
     sample = random.random()
     
     if sample > eps:
@@ -177,6 +180,7 @@ def format_swap_action(action, eps, prediction=torch.zeros(6)):
         return action
 
 def format_replace_or_flip_action(action, eps, prediction=torch.zeros(1)):
+    return action
     sample = random.random()
     
     if sample > eps:

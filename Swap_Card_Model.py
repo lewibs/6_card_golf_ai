@@ -28,4 +28,6 @@ class SwapCardModel(nn.Module):
         mask = torch.where(own_deck != 0, torch.tensor(0), torch.tensor(1))
         x = x * mask
         x = x + mask
+
+        # print(x, own_deck, current_card.item())
         return x
