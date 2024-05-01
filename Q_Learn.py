@@ -29,7 +29,62 @@ class ReplayMemory(object):
         return random.sample(self.memory, batch_size)
 
     def __len__(self):
-        return len(self.memory)
+        return len(self.memory)  
+
+# def optimize_model(
+#     optimizer: optim.Optimizer,
+#     policy,
+#     target,
+#     memory: ReplayMemory,
+#     batch_size: int,
+#     gamma: float,
+# ):
+#     if len(memory) < batch_size:
+#         return
+    
+#     transitions = memory.sample(batch_size)
+#     batch = Transition(*zip(*transitions))
+
+#     non_final_mask = torch.tensor(
+#         tuple(map(lambda s: s is not None, batch.next_state)),
+#         dtype=torch.bool,
+#     )
+
+#     non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
+
+#     state_batch = torch.cat(batch.state)
+#     action_batch = torch.stack([AI_Player.index_from_prediction(prediction) for prediction in batch.action])
+#     reward_batch = torch.cat(batch.reward)
+
+#     # Compute stochastic Q-values
+#     state_action_values = torch.stack([policy(state) for state in state_batch])
+#     state_action_values = state_action_values.view(batch_size, -1)  # Ensure correct shape
+#     state_action_probs = F.softmax(state_action_values, dim=1)
+#     state_action_values = (state_action_probs * state_action_values).sum(dim=1)
+
+#     # Compute V(s_{t+1}) for all next states
+#     next_state_values = torch.zeros(batch_size)
+#     states = torch.stack([target(state) for state in non_final_next_states])
+#     next_state_values[non_final_mask] = states.max(1)[0].detach()
+
+#     # Compute expected Q-values using target network
+#     expected_state_action_values = (next_state_values * gamma) + reward_batch
+
+#     # Compute KL divergence loss between stochastic Q-values and target Q-values
+#     loss = F.kl_div(
+#         F.log_softmax(state_action_values, dim=0),
+#         F.softmax(expected_state_action_values, dim=0),
+#         reduction='batchmean'
+#     )
+
+#     # Optimize the model
+#     optimizer.zero_grad()
+#     loss.backward()
+#     for param in policy.parameters():
+#         param.grad.data.clamp_(-1, 1)
+#     optimizer.step()
+
+#     return loss.item()
 
 
 def optimize_model(
@@ -52,7 +107,7 @@ def optimize_model(
         gamma {float} -- Reward discount factor
     """
     if len(memory) < batch_size:
-        return 1
+        return
     
     transitions = memory.sample(batch_size)
     # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for

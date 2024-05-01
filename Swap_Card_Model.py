@@ -26,4 +26,5 @@ class SwapCardModel(nn.Module):
         x = F.relu(self.fc3(x))
         mask = torch.where(own_deck != 0, torch.tensor(0), torch.tensor(1))
         x = x * mask
+        x = x + mask
         return x

@@ -36,7 +36,14 @@ class Card:
         else:
             return torch.tensor([0])
 
-
     def score(self):
-        return SCORES[VALUES.index(self.value)]
+        return Card.static_score(self.value)
+    
+    @staticmethod
+    def decode(code):
+        return VALUES[ENCODED_VALUES.index(code)]
+    
+    @staticmethod
+    def static_score(value):
+        return SCORES[VALUES.index(value)]
         

@@ -88,17 +88,22 @@ class Game:
         return ret
 
 
+
     def score_hand(self, player):
+        return Game.static_score_hand(self.hands[player])
+
+    @staticmethod
+    def static_score_hand(hand):
         score = 0
 
         for i in range(3):
-            a = self.hands[player][i]
-            b = self.hands[player][i+3]
+            a = hand[i]
+            b = hand[i+3]
 
             if a.value == b.value:
                 score += 0
             else:
-                score += sum([a.score(), b.score()])
+                score += sum([a.score() * a.known, b.score()*b.known])
 
         return score
 
@@ -165,16 +170,19 @@ A pair of equal cards in the same column scores zero points for the column (even
 
     @staticmethod
     #TODO i dont love this one since its explicitly returning non game info
-    def flip_2_cards_step(game, player, prediction1, prediction2):
+    #TODO its awful...
+    def flip_2_cards_step(game, player, prediction1=torch.zeros(6), prediction2=torch.zeros(6)):
         if game.log:
             print("Flip two cards...")
 
-        game.show_player_card(player, game.players[player].show_card(prediction1))
+        index1 = game.players[player].show_card(prediction1)
+        game.show_player_card(player, index1)
         state1 = game.encode()
-        game.show_player_card(player, game.players[player].show_card(prediction2))
+        index2 = game.players[player].show_card(prediction2)
+        game.show_player_card(player, index2)
         state2 = game.encode()
 
-        return (state1, state2)
+        return (index1, index2, state1, state2)
 
 
     @staticmethod
@@ -198,7 +206,7 @@ A pair of equal cards in the same column scores zero points for the column (even
         if game.log:
             print(f"The card is a {card.serialize()}\n")
 
-        return card
+        return card, action
 
     @staticmethod
     def replace_or_flip_step(game, player, card, prediction=torch.zeros(1), format_action=None):
@@ -215,7 +223,7 @@ A pair of equal cards in the same column scores zero points for the column (even
         return action
 
     @staticmethod
-    def swap_card_step(game, player, card, prediction, format_action=None):
+    def swap_card_step(game, player, card, prediction=torch.zeros(6), format_action=None):
         if game.log:
             print("Which card would you like to swap it with?")
         
@@ -227,9 +235,10 @@ A pair of equal cards in the same column scores zero points for the column (even
             print(f"Swapping card {action}")
 
         game.swap_player_card(player, action, card)
+        return action
 
     @staticmethod
-    def flip_card_step(game, player, card, prediction, format_action=None):
+    def flip_card_step(game, player, card, prediction=torch.zeros(6), format_action=None):
         if game.log:
             print("Which card would you like to flip instead?")
         
@@ -242,6 +251,7 @@ A pair of equal cards in the same column scores zero points for the column (even
             print(f"Flipping card {action}")
         
         game.show_player_card(player, action)
+        return action
 
     @staticmethod
     def finalize_game(game):
@@ -250,15 +260,17 @@ A pair of equal cards in the same column scores zero points for the column (even
             print("FINAL SCORES:")
             print(game.serialize_scores())
 
+        return [Game.static_score_hand(hand) for hand in game.hands]
+
 def run_game(players, log = False):
-    game = Game.initialize(players)
+    game = Game.initialize(players, log)
 
     for i in range(len(players)):
         Game.flip_2_cards_step(game, i)
 
     for i in range(len(players) * 4):
         player = i % len(players)
-        card = Game.draw_card_step(game, player)
+        card, action = Game.draw_card_step(game, player)
 
         action = Game.replace_or_flip_step(game, player, card)
 
@@ -267,7 +279,7 @@ def run_game(players, log = False):
         else:
             Game.flip_card_step(game, player, card)
 
-    Game.finalize_game(game)
+    return Game.finalize_game(game)
 
 
 

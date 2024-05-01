@@ -13,9 +13,13 @@ class AI_Player(Player):
         super().__init__(id, game)
 
         self.draw_action = DrawActionModel()
+        self.draw_action.eval()
         self.flip_action = FlipCardModel()
+        self.flip_action.eval()
         self.replace_or_flip_action = ReplaceOrFlipModel()
+        self.replace_or_flip_action.eval()
         self.swap_card_action = SwapCardModel()
+        self.swap_card_action.eval()
 
         try:
             self.draw_action.load_state_dict(torch.load(DRAW_ACTION_WEIGHTS))
@@ -50,6 +54,9 @@ class AI_Player(Player):
         pred = self.swap_card_action(self.game.encode(card))
         for i, item in enumerate(pred):
             prediction[i] = item
+
+        # mask = torch.tensor([0 if card.known else 1 for card in self.game.hands[self.id]])
+        # prediction = prediction + mask #add juat to guarentee the index is valid
         
         return AI_Player.index_from_prediction(prediction).item()
 
@@ -57,7 +64,10 @@ class AI_Player(Player):
         pred = self.flip_action(self.game.encode())
         for i, item in enumerate(pred):
             prediction[i] = item
-        
+
+        # mask = torch.tensor([0 if card.known else 1 for card in self.game.hands[self.id]])
+        # prediction = prediction + mask #add juat to guarentee the index is valid
+
         return AI_Player.index_from_prediction(prediction).item()
 
     def swap_or_flip(self, card, prediction=torch.zeros([1])):
