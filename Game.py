@@ -230,7 +230,7 @@ A pair of equal cards in the same column scores zero points for the column (even
         if game.log:
             print("Which card would you like to swap it with?")
         
-        action = game.players[player].swap_card(card)
+        action = game.players[player].swap_card(card, prediction)
         if format_action:
             action = format_action(action, prediction)
         

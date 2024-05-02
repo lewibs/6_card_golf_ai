@@ -44,10 +44,10 @@ def flip_reward(hand, index):
 
     if score_difference > 0:
         #final score is better
-        return torch.tensor([1])
+        return torch.tensor([10])
     elif score_difference < 0:
         #single score is better
-        return torch.tensor([-1])
+        return torch.tensor([0])
     else:
         if final_score <= 0:
             return torch.tensor([5])
@@ -75,94 +75,124 @@ def swap_reward(hand, index):
     min_score = min(scores)
 
     if score <= min_score:
-        return torch.tensor([1])
+        return torch.tensor([100])
     else:
         #-1*abs(min_score-score)
-        return torch.tensor([-1])
-
+        return torch.tensor([0])
+    
 #reward decision to either replace with the card, or flip randomly, game encoded is the current state
 def replace_or_flip_rewarder(action, card, game_encoded):
     hand = game_encoded[:6]
     card_encoded = card.encode()
     probalilities = card_predictor(game_encoded)
-
+    
     #reward pair
     for i in range(6):
         other_i = i - 3 if i >= 3 else i + 3
         if hand[i] == 0 and hand[other_i] == card_encoded and card.score() >= 0:
             if Swap_Action.SWAP == action:
-                return torch.tensor([1])
+                return torch.tensor([100])
             else:
-                return torch.tensor([-1])
+                return torch.tensor([0])
             
     likely_score = np.dot(probalilities, SCORES)
 
     if likely_score < 5.5:
         if card.score() < 5.5:
             if action == Swap_Action.SWAP:
-                return torch.tensor([1])
+                return torch.tensor([10])
             else:
                 return torch.tensor([0])
         else:
             if action == Swap_Action.SWAP:
-                return torch.tensor([-1])
+                return torch.tensor([0])
             else:
-                return torch.tensor([1])
+                return torch.tensor([10])
     else:
         if card.score() < 5.5:
             if action == Swap_Action.SWAP:
-                return torch.tensor([1])
+                return torch.tensor([10])
             else:
-                return torch.tensor([-1])
+                return torch.tensor([0])
         else:
             return torch.tensor([0])
 
 #reward random draw vs using the discard pile, game encoded is the current state
-def draw_reward(action, card, game_encoded):
-    hand = game_encoded[:6]
-    probalilities = card_predictor(game_encoded)
-    likely_score = np.dot(probalilities, SCORES)
+def draw_reward(action, top_discard, top_draw, hand):
+    reward = 0
 
-    if likely_score < 5.5:
-        if card.score() < 5.5:
-            if action == Draw_Action.KNOWN:
-                return torch.tensor([1])
-            else:
-                return torch.tensor([0])
-        else:
-            if action == Draw_Action.KNOWN:
-                return torch.tensor([-1])
-            else:
-                return torch.tensor([1])
+    if Draw_Action.KNOWN == action:
+        if top_discard.score() > top_draw.score():
+            reward += 1
     else:
-        if card.score() < 5.5:
-            if action == Draw_Action.KNOWN:
-                return torch.tensor([1])
-            else:
-                return torch.tensor([-1])
-        else:
-            return torch.tensor([0])
+        if top_draw.score() > top_discard.score():
+            reward +=1
+    
+    if Draw_Action.KNOWN == action:
+        #reward pair
+        for i in range(6):
+            other_i = i - 3 if i >= 3 else i + 3
+            if hand[i] == 0 and hand[other_i] == top_discard.encode() and top_discard.score() >= 0:
+                if Swap_Action.SWAP == action:
+                    reward += 100
+
+    return torch.tensor([reward])  
 
 
 def format_draw_action(action, eps, prediction=torch.zeros(1)):
-    return action
+    if random.random() < eps:
+        if random.randint(0,1):
+            prediction[0] = 1
+            return Draw_Action.KNOWN
+        else:
+            prediction[0] = -1
+            return Draw_Action.RANDOM
+    else:
+        return action
 
 def format_flip_action(action, eps, prediction=torch.zeros(6)):
-    return action
+    if random.random() < eps:
+        vals = torch.tensor([1 if p > 0 else 0 for p in prediction]) * torch.rand(6)
+
+        for i, val in enumerate(vals):
+            prediction[i] = val
+
+        action = torch.argmax(vals)
+        return action
+    else:
+        return action
+
 
 def format_swap_action(action, eps, prediction=torch.zeros(6)):
-    return action
+    if random.random() < eps:
+        vals = torch.tensor([1 if p > 0 else 0 for p in prediction]) * torch.rand(6)
+
+        for i, val in enumerate(vals):
+            prediction[i] = val
+
+        action = torch.argmax(vals)
+        return action
+    else:
+        return action
 
 def format_replace_or_flip_action(action, eps, prediction=torch.zeros(1)):
-    return action
+    if random.random() < eps:
+        if random.randint(0,1):
+            prediction[0] = 1
+            return Swap_Action.SWAP
+        else:
+            prediction[0] = -1
+            return Swap_Action.FLIP
+    else:
+        return action
 
 def start_training():
-    n_games = 100
+    n_games = 10
     batch_size = 10
     gamma = 0.99
     eps_start = 1.0
     eps_end = 0.1
-    eps_steps = 2000
+    eps_steps = n_games / 2
     memory = 1000
 
     draw_action_losses = []
@@ -175,7 +205,7 @@ def start_training():
     draw_action_target_net.load_state_dict(draw_action_policy_net.state_dict())
     draw_action_target_net.eval()
 
-    draw_action_optimizer = optim.AdamW(draw_action_policy_net.parameters(), lr=1e-4)
+    draw_action_optimizer = optim.AdamW(draw_action_policy_net.parameters(), lr=1e-3)
     draw_action_memory = ReplayMemory(memory)
 
     flip_card_policy_net = FlipCardModel()
@@ -183,7 +213,7 @@ def start_training():
     flip_card_target_net.load_state_dict(flip_card_policy_net.state_dict())
     flip_card_target_net.eval()
 
-    flip_card_optimizer = optim.AdamW(flip_card_policy_net.parameters(), lr=1e-4)
+    flip_card_optimizer = optim.AdamW(flip_card_policy_net.parameters(), lr=1e-3)
     flip_card_memory = ReplayMemory(memory)
 
     replace_or_flip_policy_net = ReplaceOrFlipModel()
@@ -191,7 +221,7 @@ def start_training():
     replace_or_flip_target_net.load_state_dict(replace_or_flip_policy_net.state_dict())
     replace_or_flip_target_net.eval()
 
-    replace_or_flip_optimizer = optim.AdamW(replace_or_flip_policy_net.parameters(), lr=1e-4)
+    replace_or_flip_optimizer = optim.AdamW(replace_or_flip_policy_net.parameters(), lr=1e-3)
     replace_or_flip_memory = ReplayMemory(memory)
 
     swap_card_policy_net = SwapCardModel()
@@ -238,6 +268,8 @@ def start_training():
         
 
         for i in range(len(game.players) * 4):
+            _top_discard = game.deck.discard_pile[-1]
+            _top_draw = game.deck.deck[-1]
 
             player = i % len(game.players)
             prediction = torch.zeros(1)
@@ -250,7 +282,7 @@ def start_training():
 
             if player == 0:
                 draw_action = prediction
-                draw_action_reward = draw_reward(action, card, state)
+                draw_action_reward = draw_reward(action, _top_discard, _top_draw, game.hands[0])
 
             prediction = torch.zeros([1])
             action = Game.replace_or_flip_step(
@@ -371,7 +403,7 @@ def start_training():
 
     print("Running games for benchmark")
     for i in range(100):
-        ai, random = run_game([AI_Player, Random_Player], log=False)
+        ai, random = run_game([AI_Player, Random_Player], log=True)
         ai_score.append(ai)
         random_score.append(random)
 

@@ -35,6 +35,13 @@ class Card:
             return torch.tensor([ENCODED_VALUES[VALUES.index(self.value)]])
         else:
             return torch.tensor([0])
+        
+    def one_hot(self):
+        hot = torch.zeros(len(VALUES))
+        if self.known:
+            hot[VALUES.index(self.value)] = 1
+
+        return hot
 
     def score(self):
         return Card.static_score(self.value)
@@ -46,4 +53,11 @@ class Card:
     @staticmethod
     def static_score(value):
         return SCORES[VALUES.index(value)]
-        
+
+    @staticmethod  
+    def encode_to_one_hot(code):
+        hot = torch.zeros(len(ENCODED_VALUES))
+        if code:
+            hot[ENCODED_VALUES.index(code)] = 1
+
+        return hot
