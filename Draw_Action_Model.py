@@ -12,15 +12,17 @@ class DrawActionModel(nn.Module):
         self.card_predictor = card_predictor
         # Define additional layers for combining inputs and CardPredictor output
         self.fc_stack = nn.Sequential(
-            nn.Linear(len(ENCODED_VALUES) + (6 * len(ENCODED_VALUES)) + (1 * len(ENCODED_VALUES)), 100),
+            #         probabilities?           hand?                     on deck
+            nn.Linear(len(ENCODED_VALUES) + (6 * len(ENCODED_VALUES)) + (1 * len(ENCODED_VALUES)), 1000),
             nn.ReLU(),
-            nn.Linear(100, 100),
+            nn.Linear(1000, 1000),
             nn.ReLU(),
-            nn.Linear(100, 100),
+            nn.Linear(1000, 100),
             nn.ReLU(),
             nn.Linear(100, 32),
             nn.ReLU(),
-            nn.Linear(32, 1)
+            nn.Linear(32, 1),
+            nn.Tanh(),
         )
 
     def forward(self, game_encoded):

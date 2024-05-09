@@ -48,6 +48,12 @@ class Card:
     
     @staticmethod
     def decode(code):
+        if torch.is_tensor(code):
+            code = int(code.item())
+
+        if code == 0:
+            return None
+
         return VALUES[ENCODED_VALUES.index(code)]
     
     @staticmethod

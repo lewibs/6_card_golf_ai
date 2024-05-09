@@ -43,10 +43,13 @@ class AI_Player(Player):
 
     def draw_card(self, prediction=torch.zeros(1)):
         prediction[0] = self.draw_action(self.game.encode()).item()
-        
-        if prediction < 0:
+        return AI_Player.draw_card_prediction_to_action(prediction)
+    
+    @staticmethod
+    def draw_card_prediction_to_action(prediction):
+        if prediction <= 0:
             return Draw_Action.RANDOM
-        else:
+        elif prediction > 0:
             return Draw_Action.KNOWN
 
 

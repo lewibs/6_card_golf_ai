@@ -119,6 +119,7 @@ def replace_or_flip_rewarder(action, card, game_encoded):
 
 #reward random draw vs using the discard pile, game encoded is the current state
 def draw_reward(action, top_discard, top_draw, hand):
+    print(top_discard, hand)
     reward = 0
 
     if Draw_Action.KNOWN == action:
@@ -187,7 +188,7 @@ def format_replace_or_flip_action(action, eps, prediction=torch.zeros(1)):
         return action
 
 def start_training():
-    n_games = 10
+    n_games = 20
     batch_size = 10
     gamma = 0.99
     eps_start = 1.0
