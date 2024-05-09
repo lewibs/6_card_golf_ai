@@ -11,6 +11,8 @@ from Random_Player import Random_Player
 from Game import Game, Swap_Action, Draw_Action, run_game
 import matplotlib.pyplot as plt
 from Card import Card, SCORES, SUITS
+import random
+import math
 
 def draw_reward(action, top_discard, hand, probabilities):
     PAIR_REWARD = 10
@@ -32,7 +34,7 @@ def draw_reward(action, top_discard, hand, probabilities):
                 return torch.tensor([-1*PAIR_REWARD])
 
     known_value = Card.static_score(Card.decode(top_discard))
-    likely_value = sum(torch.tensor(SCORES) * probabilities).item()
+    likely_value = torch.sum(torch.tensor(SCORES) * probabilities).item()
 
     good = True
     if known_value >= likely_value:
@@ -57,13 +59,17 @@ def calculate_draw_loss(prediction, reward):
     return loss
 
 def start_training():
-    n_games = 500
-    # batch_size = 10
-    # gamma = 0.99
-    # eps_start = 1.0
-    # eps_end = 0.1
-    # eps_steps = n_games / 2
-    # memory = 1000
+    # 0
+    torch.manual_seed(1)
+    random.seed(2)
+    print("Starting training on Draw_Action_Model:")
+    n_games = 1000
+    eps_start = 1.0
+    eps_end = 0.01
+    eps_steps = n_games / 2
+    train = 0.80
+
+    print(f"generating {n_games} worth of random data.")
     
     states = []
     players = [Random_Player, Random_Player]
@@ -91,14 +97,34 @@ def start_training():
             
         Game.finalize_game(game)
 
+    print(f"Games generated processing {len(states)} game states")
     model = DrawActionModel()
     model.train()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     losses = []
 
-    for state in states:
+    train_split = math.floor(len(states) * train)
+
+    train = states[:train_split]
+    validate = states[train_split:]
+    print(len(train))
+    print(len(validate))
+
+    for i, state in enumerate(train):
+        if i % 100 == 0:
+            print(f"{i}/{len(train)} done")
+
+        t = np.clip(i / eps_steps, 0, 1)
+        eps = (1-t) * eps_start + t * eps_end
+
         prediction = model(state)
+
+        if random.random() < eps:
+            random_values = torch.FloatTensor(prediction.size()).uniform_(-1, 1)
+            prediction = torch.where(torch.rand_like(prediction) < eps, random_values, prediction)
+
+
         draw = Card(Card.decode(state[-1]), SUITS[0])
         draw.show()
 
@@ -121,23 +147,19 @@ def start_training():
         loss.backward()
         optimizer.step()
 
-    # Plotting both arrays on the same plot
-    plt.plot(losses, label='Losses')  # Plotting y1
-
-    # Adding labels and title
-    plt.xlabel('Index')  # x-axis label
-    plt.ylabel('Loss')  # y-axis label
-    plt.title('Plotting Losses')
-
-    # Adding legend
-    plt.legend()
-
-    # Displaying the plot
-    plt.show()
-
+    torch.save(model.state_dict(), DRAW_ACTION_WEIGHTS)
     model.eval()
 
-    for state in states:
+    correct_known = 0
+    incorrect_known = 0
+    correct_unknown = 0
+    incorrect_unknown = 0
+
+    print("Validating actions") #TODO probably should do this on fresh data
+    for i, state in enumerate(validate):
+        if i % 100 == 0:
+            print(f"{i}/{len(validate)} done")
+
         draw = Card(Card.decode(state[-1]), SUITS[0])
         draw.show()
         hand = []
@@ -148,10 +170,41 @@ def start_training():
                 c.show()
             hand.append(c)
 
+        action = AI_Player.draw_card_prediction_to_action(model(state))
         for i in range(6):
             other_i = i - 3 if i >= 3 else i + 3
             if (hand[i].encode() == 0 and hand[other_i].encode() == draw.encode()) or (hand[other_i].encode() == 0 and hand[i].encode() == draw.encode()):
-                print(AI_Player.draw_card_prediction_to_action(model(state)))
-                
+                if Draw_Action.KNOWN == action:
+                    correct_known += 1
+                    break
+                else:
+                    incorrect_unknown += 1
+                    break
+            else:
+                probabilities = card_predictor(state)
+
+                known_value = draw.score()
+                likely_value = torch.sum(torch.tensor(SCORES) * probabilities).item()
+
+                if known_value < likely_value:
+                    if Draw_Action.KNOWN == action:
+                        correct_known += 1
+                        break
+                    else:
+                        incorrect_unknown += 1
+                        break
+                else:
+                    if Draw_Action.KNOWN == action:
+                        incorrect_known += 1
+                        break
+                    else:
+                        correct_unknown += 1
+                        break
+
+    print(f"Correct known: {correct_known}")
+    print(f"Incorrect known: {incorrect_known}")
+    print(f"Correct random: {correct_unknown}")
+    print(f"Incorrect random: {incorrect_unknown}")            
+    
 if __name__ == "__main__":
     start_training()
