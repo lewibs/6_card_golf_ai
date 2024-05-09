@@ -55,6 +55,7 @@ def draw_reward(action, top_discard, hand, probabilities):
     return torch.tensor([diff])
 
 def calculate_draw_loss(prediction, reward):
+    #TODO I dont think this is calculating anything of real value??? It seems to work though not sure what is going on there?
     loss = prediction * reward * -1
     return loss
 
@@ -70,7 +71,7 @@ def start_training():
     train = 0.80
 
     print(f"generating {n_games} worth of random data.")
-    
+
     states = []
     players = [Random_Player, Random_Player]
    
@@ -97,6 +98,7 @@ def start_training():
             
         Game.finalize_game(game)
 
+
     print(f"Games generated processing {len(states)} game states")
     model = DrawActionModel()
     model.train()
@@ -108,8 +110,6 @@ def start_training():
 
     train = states[:train_split]
     validate = states[train_split:]
-    print(len(train))
-    print(len(validate))
 
     for i, state in enumerate(train):
         if i % 100 == 0:
@@ -155,7 +155,7 @@ def start_training():
     correct_unknown = 0
     incorrect_unknown = 0
 
-    print("Validating actions") #TODO probably should do this on fresh data
+    print("Validating actions")
     for i, state in enumerate(validate):
         if i % 100 == 0:
             print(f"{i}/{len(validate)} done")

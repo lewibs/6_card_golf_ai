@@ -52,11 +52,21 @@ class Deck:
 
     def encode(self):
         if not self.discard_pile:
+            top = None
             discarded = torch.zeros((0,))  # Return an empty tensor if discard pile is empty
         else:
             discarded = torch.cat([card.encode() for card in self.discard_pile])
+            top = discarded[-1]
+            discarded = discarded[:-1]
+
         unknown = torch.zeros(len(self.deck))
-        return torch.cat((discarded, unknown))
+
+        if top:
+            res = torch.cat((discarded, unknown, torch.tensor([top])))
+        else:
+            res = torch.cat((discarded, unknown))
+
+        return res
 
     def __len__(self):
         return len(self.deck)

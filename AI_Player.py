@@ -75,7 +75,10 @@ class AI_Player(Player):
 
     def swap_or_flip(self, card, prediction=torch.zeros([1])):
         prediction[0] = self.replace_or_flip_action(self.game.encode(card)).item()
-
+        return AI_Player.swap_or_flip_prediction_to_action(prediction)
+        
+    @staticmethod
+    def swap_or_flip_prediction_to_action(prediction):
         if prediction > 0:
             return Swap_Action.SWAP
         else:

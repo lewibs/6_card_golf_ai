@@ -32,17 +32,9 @@ class Game:
 
         if card:
             card = card.encode()
-            game = torch.cat((game, torch.zeros(1)))
-            index = len(self.deck.discard_pile)
-            index = (len(self.hands) * 6) + index 
-            game[index] = card
-        else:
-            index = len(self.deck.discard_pile)
-            index = (len(self.hands) * 6) + index 
-            card = game[index-1]
+            #add the on deck card to the back so that it is always in a known location. THis may help with ai understanding which card they are swapping things with
+            game = torch.cat((game, torch.tensor([card])))
 
-        #add the on deck card to the back so that it is always in a known location. THis may help with ai understanding which card they are swapping things with
-        game = torch.cat((game, torch.tensor([card])))
         return game
 
     def encode_hand(self, player):
@@ -199,7 +191,6 @@ A pair of equal cards in the same column scores zero points for the column (even
         action = game.players[player].draw_card(prediction)
         if format_action:
             action = format_action(action, prediction)
-
 
         if action == Draw_Action.RANDOM:
             game.draw_card()
