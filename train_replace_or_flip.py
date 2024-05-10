@@ -13,6 +13,24 @@ import math
 from Random_Player import Random_Player
 
 def replace_or_flip_rewarder(action, card, game_encoded):
+
+    own_deck = game_encoded[:6]
+
+    pair = 0
+    for i in range(6):
+        other_i = i - 3 if i >= 3 else i + 3
+
+        if own_deck[other_i] == 0 or own_deck[i] != 0:
+            continue
+
+        if own_deck[other_i] == card:
+            pair = 1
+
+    if pair:
+        if action == Swap_Action.SWAP:
+            return torch.tensor([10])
+        else:
+            return torch.tensor([-10])
     
     probabilities = card_predictor(game_encoded)
     known_value = Card.static_score(Card.decode(card))
@@ -49,7 +67,7 @@ def start_training():
     random.seed(3)
 
     print("Starting training on Replace_Or_Flip_Model:")
-    n_games = 1000
+    n_games = 100
     eps_start = 1.0
     eps_end = 0.1
     eps_steps = n_games / 2
@@ -143,14 +161,7 @@ def start_training():
             print(f"{i}/{len(validate)} done")
 
         draw = torch.tensor([state[-1]])
-
-        hand = []
-        for v in state[:6]:
-            v = Card.decode(v)
-            c = Card(v, SUITS[0])
-            if v:
-                c.show()
-            hand.append(c)
+        hand = state[:6]
 
         action = AI_Player.swap_or_flip_prediction_to_action(model(state))
 
@@ -160,16 +171,32 @@ def start_training():
         known_value = Card.static_score(Card.decode(draw))
         likely_value = torch.sum(torch.tensor(SCORES) * probabilities).item()
 
-        if known_value >= likely_value:
-            if action == Swap_Action.FLIP:
-                correct_flip += 1
-            else:
-                incorrect_swap += 1
-        else:
-            if action == Swap_Action.FLIP:
-                incorrect_flip += 1
-            else:
+        pair = 0
+        for i in range(6):
+            other_i = i - 3 if i >= 3 else i + 3
+
+            if hand[other_i] == 0 or hand[i] != 0:
+                continue
+
+            if hand[other_i] == draw:
+                pair = 1
+
+        if pair:
+            if action == Swap_Action.SWAP:
                 correct_swap += 1
+            else:
+                incorrect_flip += 1
+        else:
+            if known_value >= likely_value:
+                if action == Swap_Action.FLIP:
+                    correct_flip += 1
+                else:
+                    incorrect_swap += 1
+            else:
+                if action == Swap_Action.FLIP:
+                    incorrect_flip += 1
+                else:
+                    correct_swap += 1
         
     print(f"Correct swap: {correct_swap}")
     print(f"Incorrect swap: {incorrect_swap}")
