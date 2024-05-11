@@ -124,7 +124,6 @@ def replace_or_flip_rewarder(action, card, game_encoded):
 
 #reward random draw vs using the discard pile, game encoded is the current state
 def draw_reward(action, top_discard, top_draw, hand):
-    print(top_discard, hand)
     reward = 0
 
     if Draw_Action.KNOWN == action:
@@ -440,12 +439,12 @@ def benchmark():
 
 if __name__ == "__main__":
     #single train models:
-    train_draw_card()
-    train_replace_or_flip()
-    train_swap_card()
-    train_flip_card()
+    # train_draw_card()
+    # train_replace_or_flip()
+    # train_swap_card()
+    # train_flip_card()
     #train at same time with q-learning
-    # train_q_learn()
+    train_q_learn()
     #check results
     benchmark()
     
