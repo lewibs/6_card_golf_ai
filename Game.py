@@ -98,7 +98,14 @@ class Game:
             if a.value == b.value:
                 score += 0
             else:
-                score += sum([a.score() * a.known, b.score()*b.known])
+                vals = []
+
+                if a.known:
+                    vals.append(a.score())
+                if b.known:
+                    vals.append(b.score())
+
+                score += sum(vals)
 
         return score
 

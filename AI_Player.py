@@ -61,9 +61,15 @@ class AI_Player(Player):
         # mask = torch.tensor([0 if card.known else 1 for card in self.game.hands[self.id]])
         # prediction = prediction + mask #add juat to guarentee the index is valid
         
-        return AI_Player.index_from_prediction(prediction).item()
+        return AI_Player.index_from_prediction(prediction)
 
     def show_card(self, prediction=torch.zeros(6)):
+        # indices_of_unknown = [index for index, obj in enumerate(self.game.hands[self.id]) if not obj.known]
+        # rand = random.randint(0,len(indices_of_unknown)-1)
+        # index = indices_of_unknown[rand]
+        # return index
+
+
         pred = self.flip_action(self.game.encode())
         for i, item in enumerate(pred):
             prediction[i] = item
@@ -71,7 +77,7 @@ class AI_Player(Player):
         # mask = torch.tensor([0 if card.known else 1 for card in self.game.hands[self.id]])
         # prediction = prediction + mask #add juat to guarentee the index is valid
 
-        return AI_Player.index_from_prediction(prediction).item()
+        return AI_Player.index_from_prediction(prediction)
 
     def swap_or_flip(self, card, prediction=torch.zeros([1])):
         prediction[0] = self.replace_or_flip_action(self.game.encode(card)).item()
@@ -86,4 +92,4 @@ class AI_Player(Player):
         
     @staticmethod
     def index_from_prediction(prediction):
-        return torch.argmax(prediction).unsqueeze(0)
+        return torch.argmax(prediction).unsqueeze(0).item()

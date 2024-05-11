@@ -17,6 +17,11 @@ from Q_Learn import optimize_model
 import matplotlib.pyplot as plt
 from Card import Card, SCORES
 import statistics
+from train_draw_card import start_training as train_draw_card
+from train_replace_or_flip import start_training as train_replace_or_flip
+from train_swap_card import start_training as train_swap_card
+from train_flip_card import start_training as train_flip_card
+import random
 
 #reward the flip action where hand is the current state, and index is the card recently flipped
 def flip_reward(hand, index):
@@ -187,7 +192,7 @@ def format_replace_or_flip_action(action, eps, prediction=torch.zeros(1)):
     else:
         return action
 
-def start_training():
+def train_q_learn():
     n_games = 20
     batch_size = 10
     gamma = 0.99
@@ -399,23 +404,6 @@ def start_training():
         Game.finalize_game(game)
         game.reset()
 
-    ai_score = []
-    random_score = []
-
-    print("Running games for benchmark")
-    for i in range(100):
-        ai, random = run_game([AI_Player, Random_Player], log=True)
-        ai_score.append(ai)
-        random_score.append(random)
-
-    print("Average Scores:")
-    print(f"AI: {statistics.mean(ai_score)}")
-    print(f"Random: {statistics.mean(random_score)}\n")
-
-    print("Median Scores:")
-    print(f"AI: {statistics.median(ai_score)}")
-    print(f"Random: {statistics.median(random_score)}")
-
     torch.save(draw_action_policy_net.state_dict(), DRAW_ACTION_WEIGHTS)
     torch.save(flip_card_policy_net.state_dict(), FLIP_CARD_WEIGHTS)
     torch.save(replace_or_flip_policy_net.state_dict(), REPLACE_OR_FLIP_WEIGHTS)
@@ -432,5 +420,32 @@ def start_training():
     plt.legend()
     plt.show()
 
+def benchmark():
+    ai_score = []
+    random_score = []
+
+    print("Running games for benchmark")
+    for i in range(500):
+        ai, random = run_game([AI_Player, Random_Player], log=False)
+        ai_score.append(ai)
+        random_score.append(random)
+
+    print("Average Scores:")
+    print(f"AI: {statistics.mean(ai_score)}")
+    print(f"Random: {statistics.mean(random_score)}\n")
+
+    print("Median Scores:")
+    print(f"AI: {statistics.median(ai_score)}")
+    print(f"Random: {statistics.median(random_score)}")
+
 if __name__ == "__main__":
-    start_training()
+    #single train models:
+    train_draw_card()
+    train_replace_or_flip()
+    train_swap_card()
+    train_flip_card()
+    #train at same time with q-learning
+    # train_q_learn()
+    #check results
+    benchmark()
+    
