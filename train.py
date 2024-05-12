@@ -17,144 +17,25 @@ from Q_Learn import optimize_model
 import matplotlib.pyplot as plt
 from Card import Card, SCORES
 import statistics
-from train_draw_card import start_training as train_draw_card
-from train_replace_or_flip import start_training as train_replace_or_flip
-from train_swap_card import start_training as train_swap_card
-from train_flip_card import start_training as train_flip_card
+from train_draw_card import start_training as train_draw_card, draw_reward
+from train_replace_or_flip import start_training as train_replace_or_flip, replace_or_flip_rewarder
+from train_swap_card import start_training as train_swap_card, swap_reward
+from train_flip_card import start_training as train_flip_card, flip_reward
 import random
 
-#reward the flip action where hand is the current state, and index is the card recently flipped
-def flip_reward(hand, index):
-    other_index = index - 3 if index >= 3 else index + 3
-    a = hand[index]
-    b = hand[other_index]
-
-    a = a.encode() if isinstance(a, Card) else int(a.item())
-    b = b.encode() if isinstance(b, Card) else int(b.item())
-
-    if a == 0 or b == 0:
-        return torch.tensor([0])
-    
-    score_a = Card.static_score(Card.decode(a))
-    score_b = Card.static_score(Card.decode(b))
-
-    if a == b:
-        final_score = 0
-    else:
-        final_score = sum([score_a, score_b])
-
-    single_score = score_b
-
-    score_difference = single_score - final_score
-
-    if score_difference > 0:
-        #final score is better
-        return torch.tensor([10])
-    elif score_difference < 0:
-        #single score is better
-        return torch.tensor([0])
-    else:
-        if final_score <= 0:
-            return torch.tensor([5])
-
-        return torch.tensor([0])
-
-#reward the swap action where hand is the current state, and index is the card recently added
-def swap_reward(hand, index):
-    hand_clone = hand[:] #clone for safety
-    unknown_indexes = [index for index, value in enumerate([v.known for v in hand_clone]) if value == 0]
-
-    score = Game.static_score_hand(hand_clone)
-    scores = []
-
-    for swap_index in unknown_indexes:
-        hand_clone = hand[:]
-        hold = hand_clone[index]
-        hand_clone[index] = hand_clone[swap_index]
-        hand_clone[swap_index] = hold
-        scores.append(Game.static_score_hand(hand_clone))
-
-    if len(scores) == 0:
-        return torch.tensor([0])
-
-    min_score = min(scores)
-
-    if score <= min_score:
-        return torch.tensor([100])
-    else:
-        #-1*abs(min_score-score)
-        return torch.tensor([0])
-    
-#reward decision to either replace with the card, or flip randomly, game encoded is the current state
-def replace_or_flip_rewarder(action, card, game_encoded):
-    hand = game_encoded[:6]
-    card_encoded = card.encode()
-    probalilities = card_predictor(game_encoded)
-    
-    #reward pair
-    for i in range(6):
-        other_i = i - 3 if i >= 3 else i + 3
-        if hand[i] == 0 and hand[other_i] == card_encoded and card.score() >= 0:
-            if Swap_Action.SWAP == action:
-                return torch.tensor([100])
-            else:
-                return torch.tensor([0])
-            
-    likely_score = np.dot(probalilities, SCORES)
-
-    if likely_score < 5.5:
-        if card.score() < 5.5:
-            if action == Swap_Action.SWAP:
-                return torch.tensor([10])
-            else:
-                return torch.tensor([0])
-        else:
-            if action == Swap_Action.SWAP:
-                return torch.tensor([0])
-            else:
-                return torch.tensor([10])
-    else:
-        if card.score() < 5.5:
-            if action == Swap_Action.SWAP:
-                return torch.tensor([10])
-            else:
-                return torch.tensor([0])
-        else:
-            return torch.tensor([0])
-
-#reward random draw vs using the discard pile, game encoded is the current state
-def draw_reward(action, top_discard, top_draw, hand):
-    reward = 0
-
-    if Draw_Action.KNOWN == action:
-        if top_discard.score() > top_draw.score():
-            reward += 1
-    else:
-        if top_draw.score() > top_discard.score():
-            reward +=1
-    
-    if Draw_Action.KNOWN == action:
-        #reward pair
-        for i in range(6):
-            other_i = i - 3 if i >= 3 else i + 3
-            if hand[i] == 0 and hand[other_i] == top_discard.encode() and top_discard.score() >= 0:
-                if Swap_Action.SWAP == action:
-                    reward += 100
-
-    return torch.tensor([reward])  
-
-
+#TODO maybe get rid of this?
 def format_draw_action(action, eps, prediction=torch.zeros(1)):
     if random.random() < eps:
         if random.randint(0,1):
             prediction[0] = 1
-            return Draw_Action.KNOWN
         else:
             prediction[0] = -1
-            return Draw_Action.RANDOM
+
+        return AI_Player.draw_card_prediction_to_action(prediction)
     else:
         return action
 
+#TODO maybe get rid of this?
 def format_flip_action(action, eps, prediction=torch.zeros(6)):
     if random.random() < eps:
         vals = torch.tensor([1 if p > 0 else 0 for p in prediction]) * torch.rand(6)
@@ -167,7 +48,7 @@ def format_flip_action(action, eps, prediction=torch.zeros(6)):
     else:
         return action
 
-
+#TODO maybe get rid of this?
 def format_swap_action(action, eps, prediction=torch.zeros(6)):
     if random.random() < eps:
         vals = torch.tensor([1 if p > 0 else 0 for p in prediction]) * torch.rand(6)
@@ -180,14 +61,15 @@ def format_swap_action(action, eps, prediction=torch.zeros(6)):
     else:
         return action
 
+#TODO maybe get rid of this?
 def format_replace_or_flip_action(action, eps, prediction=torch.zeros(1)):
     if random.random() < eps:
         if random.randint(0,1):
             prediction[0] = 1
-            return Swap_Action.SWAP
         else:
             prediction[0] = -1
-            return Swap_Action.FLIP
+
+        return AI_Player.swap_or_flip_prediction_to_action(prediction)
     else:
         return action
 
@@ -237,7 +119,7 @@ def train_q_learn():
     swap_card_optimizer = optim.AdamW(swap_card_policy_net.parameters(), lr=1e-3)
     swap_card_memory = ReplayMemory(memory)
 
-    #NOTE if an issue occurs, its very likely its from the replacement with the models in this function
+    #replace the ai of player with the trainable models rather then the base initialization that is used
     def init_ai(*args):
         ai = AI_Player(*args)
         ai.draw_action = draw_action_policy_net
@@ -246,13 +128,12 @@ def train_q_learn():
         ai.replace_or_flip_action = replace_or_flip_policy_net
         return ai
 
+    #TODO maybe train with another AI will require fixing some hard coding which I dont feel like at the moment just making a player flag would work though
     game = Game.initialize([init_ai, Random_Player], log=False)
 
     for step in range(n_games):
         swap_card_action = None
         flip_card_action = None
-        
-        state = game.encode()
 
         t = np.clip(step / eps_steps, 0, 1)
         eps = (1-t) * eps_start + t * eps_end
@@ -260,22 +141,18 @@ def train_q_learn():
         for i in range(len(game.players)):
             prediction1 = torch.zeros(6)
             prediction2 = torch.zeros(6)
-            index1, index2, state1, state2 = Game.flip_2_cards_step(game, i, prediction1, prediction2)
+            _, _, state1, state2 = Game.flip_2_cards_step(game, i, prediction1, prediction2)
 
+            #TODO maybe just remove this. unsure how useful it is/correct it is
             if i == 0:
-                flip1_reward = flip_reward(state1[:6], index1)
-                flip_card_memory.push(state.unsqueeze(0), prediction1.unsqueeze(0), state1.unsqueeze(0), flip1_reward)
-                flip2_reward = flip_reward(state2[:6], index2)
+                flip1_reward = flip_reward(state1)
+                flip_card_memory.push(game.encode().unsqueeze(0), prediction1.unsqueeze(0), state1.unsqueeze(0), flip1_reward)
+                flip2_reward = flip_reward(state2)
                 flip_card_memory.push(state1.unsqueeze(0), prediction2.unsqueeze(0), state2.unsqueeze(0), flip2_reward)
-                next_state = state2
-                state = state2
 
         
 
         for i in range(len(game.players) * 4):
-            _top_discard = game.deck.discard_pile[-1]
-            _top_draw = game.deck.deck[-1]
-
             player = i % len(game.players)
             prediction = torch.zeros(1)
             card, action = Game.draw_card_step(
@@ -287,7 +164,8 @@ def train_q_learn():
 
             if player == 0:
                 draw_action = prediction
-                draw_action_reward = draw_reward(action, _top_discard, _top_draw, game.hands[0])
+                draw_action_state = game.encode(card)
+                draw_action_reward = draw_reward(action, draw_action_state)
 
             prediction = torch.zeros([1])
             action = Game.replace_or_flip_step(
@@ -300,7 +178,8 @@ def train_q_learn():
 
             if player == 0:
                 replace_or_flip_action = prediction
-                replace_or_flip_reward = replace_or_flip_rewarder(action, card, state)
+                replace_or_flip_state = game.encode(card)
+                replace_or_flip_reward = replace_or_flip_rewarder(action, replace_or_flip_state)
 
             if action == Swap_Action.SWAP:
                 prediction = torch.zeros(6)
@@ -314,7 +193,9 @@ def train_q_learn():
 
                 if player == 0:
                     swap_card_action = prediction
-                    swap_card_reward = swap_reward(game.hands[0], index)
+                    #TODO encode with card?
+                    swap_card_state = game.encode()
+                    swap_card_reward = swap_reward(swap_card_state)
 
             else:
                 prediction = torch.zeros(6)
@@ -328,23 +209,25 @@ def train_q_learn():
 
                 if player == 0:
                     flip_card_action = prediction
-                    flip_card_reward = flip_reward(game.hands[0], index)
+                    #TODO encode with card?
+                    flip_card_state = game.encode()
+                    flip_card_reward = flip_reward(flip_card_state)
 
             if player == 0:
                 next_state = game.encode()
 
                 #push changes to memory
-                draw_action_memory.push(state.unsqueeze(0), draw_action.unsqueeze(0), next_state.unsqueeze(0), draw_action_reward)
+                draw_action_memory.push(draw_action_state.unsqueeze(0), draw_action.unsqueeze(0), next_state.unsqueeze(0), draw_action_reward)
 
                 if flip_card_action is not None:
-                    flip_card_memory.push(state.unsqueeze(0), flip_card_action.unsqueeze(0), next_state.unsqueeze(0), flip_card_reward)
+                    #TODO the reward is a tensor... that dont make sense
+                    flip_card_memory.push(flip_card_state.unsqueeze(0), flip_card_action.unsqueeze(0), next_state.unsqueeze(0), flip_card_reward)
 
                 if swap_card_action is not None:
-                    swap_card_memory.push(state.unsqueeze(0), swap_card_action.unsqueeze(0), next_state.unsqueeze(0), swap_card_reward)
+                    #TODO the reward is a tensor... that dont make sense
+                    swap_card_memory.push(swap_card_state.unsqueeze(0), swap_card_action.unsqueeze(0), next_state.unsqueeze(0), swap_card_reward)
 
-                replace_or_flip_memory.push(state.unsqueeze(0), replace_or_flip_action.unsqueeze(0), next_state.unsqueeze(0), replace_or_flip_reward)
-
-                state = next_state
+                replace_or_flip_memory.push(replace_or_flip_state.unsqueeze(0), replace_or_flip_action.unsqueeze(0), next_state.unsqueeze(0), replace_or_flip_reward)
 
                 loss = []
 
@@ -399,7 +282,7 @@ def train_q_learn():
                 loss.append(loss_replace_or_flip)
 
         loss = [v if v is not None else 0 for v in loss]
-        print("Losses: Draw_Action_Model={:<.4f} Flip_Card_Model={:<.4f} Swap_Card_Model={:<.4f} Replace_Or_Flip_Model={:<.4f}".format(*loss))
+        #print("Losses: Draw_Action_Model={:<.4f} Flip_Card_Model={:<.4f} Swap_Card_Model={:<.4f} Replace_Or_Flip_Model={:<.4f}".format(*loss))
         Game.finalize_game(game)
         game.reset()
 

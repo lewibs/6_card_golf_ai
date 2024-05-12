@@ -4,8 +4,16 @@ import torch.optim as optim
 from collections import namedtuple
 import random
 from AI_Player import AI_Player
+from Card_Predictor_Model import card_predictor
+from Card import SCORES
 
-Transition = namedtuple("Transition", ("state", "action", "next_state", "reward"))
+Transition = namedtuple("Transition", ("state", "simplified_state", "action", "next_state", "reward"))
+
+def createTransitionTuple(state, action, next_state, reward):
+    # probabilities = card_predictor(state)
+    # likely_value = torch.sum(torch.tensor(SCORES) * probabilities).item()
+    simplified_state = torch.cat((state[0][:6], torch.tensor([state[0][-1]])))
+    return Transition(state, simplified_state, action, next_state, reward)
 
 class ReplayMemory(object):
     """Copied verbatim from the PyTorch DQN tutorial.
@@ -22,7 +30,7 @@ class ReplayMemory(object):
         """Saves a transition."""
         if len(self.memory) < self.capacity:
             self.memory.append(None)
-        self.memory[self.position] = Transition(*args)
+        self.memory[self.position] = createTransitionTuple(*args)
         self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
@@ -30,62 +38,6 @@ class ReplayMemory(object):
 
     def __len__(self):
         return len(self.memory)  
-
-# def optimize_model(
-#     optimizer: optim.Optimizer,
-#     policy,
-#     target,
-#     memory: ReplayMemory,
-#     batch_size: int,
-#     gamma: float,
-# ):
-#     if len(memory) < batch_size:
-#         return
-    
-#     transitions = memory.sample(batch_size)
-#     batch = Transition(*zip(*transitions))
-
-#     non_final_mask = torch.tensor(
-#         tuple(map(lambda s: s is not None, batch.next_state)),
-#         dtype=torch.bool,
-#     )
-
-#     non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
-
-#     state_batch = torch.cat(batch.state)
-#     action_batch = torch.stack([AI_Player.index_from_prediction(prediction) for prediction in batch.action])
-#     reward_batch = torch.cat(batch.reward)
-
-#     # Compute stochastic Q-values
-#     state_action_values = torch.stack([policy(state) for state in state_batch])
-#     state_action_values = state_action_values.view(batch_size, -1)  # Ensure correct shape
-#     state_action_probs = F.softmax(state_action_values, dim=1)
-#     state_action_values = (state_action_probs * state_action_values).sum(dim=1)
-
-#     # Compute V(s_{t+1}) for all next states
-#     next_state_values = torch.zeros(batch_size)
-#     states = torch.stack([target(state) for state in non_final_next_states])
-#     next_state_values[non_final_mask] = states.max(1)[0].detach()
-
-#     # Compute expected Q-values using target network
-#     expected_state_action_values = (next_state_values * gamma) + reward_batch
-
-#     # Compute KL divergence loss between stochastic Q-values and target Q-values
-#     loss = F.kl_div(
-#         F.log_softmax(state_action_values, dim=0),
-#         F.softmax(expected_state_action_values, dim=0),
-#         reduction='batchmean'
-#     )
-
-#     # Optimize the model
-#     optimizer.zero_grad()
-#     loss.backward()
-#     for param in policy.parameters():
-#         param.grad.data.clamp_(-1, 1)
-#     optimizer.step()
-
-#     return loss.item()
-
 
 def optimize_model(
     optimizer: optim.Optimizer,
@@ -125,14 +77,13 @@ def optimize_model(
     non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
 
     state_batch = torch.cat(batch.state)
-    action_batch = torch.stack([AI_Player.index_from_prediction(prediction) for prediction in batch.action])
+    action_batch = torch.cat(batch.action)
     reward_batch = torch.cat(batch.reward)
 
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken. These are the actions which would've been taken
     # for each batch state according to policy
     state_action_values = torch.stack([policy(state) for state in state_batch])
-    #TODO it looks like there may be an issue here where the index that is used to get the max is not acctually getting the max value
     state_action_values = state_action_values.gather(1, action_batch)
     
     # Compute V(s_{t+1}) for all next states.

@@ -12,8 +12,8 @@ import random
 import math
 from Random_Player import Random_Player
 
-def replace_or_flip_rewarder(action, card, game_encoded):
-
+def replace_or_flip_rewarder(action, game_encoded):
+    card = game_encoded[-1]
     own_deck = game_encoded[:6]
 
     pair = 0
@@ -137,7 +137,7 @@ def start_training():
             hand.append(c)
 
         action = AI_Player.swap_or_flip_prediction_to_action(prediction)
-        reward = replace_or_flip_rewarder(action, draw, state)
+        reward = replace_or_flip_rewarder(action, state)
         loss = calculate_replace_or_flip_loss(prediction, reward)
 
         losses.append(loss.item())
@@ -165,7 +165,7 @@ def start_training():
 
         action = AI_Player.swap_or_flip_prediction_to_action(model(state))
 
-        rewards.append(replace_or_flip_rewarder(action, draw, state))
+        rewards.append(replace_or_flip_rewarder(action, state))
 
         probabilities = card_predictor(torch.cat((state, draw)))
         known_value = Card.static_score(Card.decode(draw))

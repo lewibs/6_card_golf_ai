@@ -14,11 +14,12 @@ from Card import Card, SCORES, SUITS
 import random
 import math
 
-def draw_reward(action, top_discard, hand, probabilities):
+def draw_reward(action, game_encoded):
     PAIR_REWARD = 10
 
-    top_discard = top_discard.encode()
-    hand = [c.encode() for c in hand]
+    probabilities = card_predictor(game_encoded)
+    top_discard = game_encoded[-1]
+    hand = game_encoded[:6]
 
     for i in range(6):
         other_i = i - 3 if i >= 3 else i + 3
@@ -124,21 +125,7 @@ def start_training():
             random_values = torch.FloatTensor(prediction.size()).uniform_(-1, 1)
             prediction = torch.where(torch.rand_like(prediction) < eps, random_values, prediction)
 
-
-        draw = Card(Card.decode(state[-1]), SUITS[0])
-        draw.show()
-
-        hand = []
-        for v in state[:6]:
-            v = Card.decode(v)
-            c = Card(v, SUITS[0])
-            if v:
-                c.show()
-            hand.append(c)
-
-        action = AI_Player.draw_card_prediction_to_action(prediction)
-        probabilities = card_predictor(state)
-        reward = draw_reward(action, draw, hand, probabilities)
+        reward = draw_reward(action, state)
         loss = calculate_draw_loss(prediction, reward)
 
         losses.append(loss.item())
