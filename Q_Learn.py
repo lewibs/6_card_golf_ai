@@ -84,7 +84,13 @@ def optimize_model(
     # columns of actions taken. These are the actions which would've been taken
     # for each batch state according to policy
     state_action_values = torch.stack([policy(state) for state in state_batch])
-    state_action_values = state_action_values.gather(1, action_batch)
+    action_index = torch.max(action_batch, dim=1).indices.unsqueeze(1)
+    #this was confusing at first but all we are doing is getting the index which was used for each predictioin.
+    #it jsut so happsn that the two matix based predictions are max based and the binary ones are always the 0 index
+    #the loss is calculated via numerical value so its no problem.
+    state_action_values = state_action_values.gather(1, action_index)
+
+
     
     # Compute V(s_{t+1}) for all next states.
     # Expected values of actions for non_final_next_states are computed based
