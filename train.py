@@ -70,12 +70,12 @@ def format_replace_or_flip_action(action, eps, prediction=torch.zeros(1)):
         return action
 
 def train_q_learn():
-    n_games = 100
+    n_games = 20
     batch_size = 10
     gamma = 0.99
-    eps_start = 1.0
-    eps_end = 0.1
-    eps_steps = n_games / 2
+    eps_start = 0.01
+    eps_end = 0.01
+    eps_steps = 1
     memory = 1000
 
     draw_action_losses = []
@@ -119,9 +119,13 @@ def train_q_learn():
     def init_ai(*args):
         ai = AI_Player(*args)
         ai.draw_action = draw_action_policy_net
+        ai.draw_action.load_state_dict(torch.load(DRAW_ACTION_WEIGHTS))
         ai.flip_card_action = flip_card_policy_net
+        ai.flip_card_action.load_state_dict(torch.load(FLIP_CARD_WEIGHTS))
         ai.swap_card_action = swap_card_policy_net
+        ai.swap_card_action.load_state_dict(torch.load(SWAP_CARD_WEIGHTS))
         ai.replace_or_flip_action = replace_or_flip_policy_net
+        ai.replace_or_flip_action.load_state_dict(torch.load(REPLACE_OR_FLIP_WEIGHTS))
         return ai
 
     #TODO maybe train with another AI will require fixing some hard coding which I dont feel like at the moment just making a player flag would work though
@@ -319,11 +323,12 @@ if __name__ == "__main__":
     train_swap_card()
     train_flip_card()
     print("Done initial training")
-    benchmark()
+    # benchmark()
     
     #train at same time with q-learning
-    # train_q_learn()
+    #TODO q_learn makes things worse???????
+    train_q_learn()
     #check results
-    # print("Done q-learning")
-    # benchmark()
+    print("Done q-learning")
+    benchmark()
     
