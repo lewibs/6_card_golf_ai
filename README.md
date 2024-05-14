@@ -26,4 +26,15 @@ Each jack or queen scores 10 points.
 Each king scores zero points.
 A pair of equal cards in the same column scores zero points for the column (even if the equal cards are 2s).
 
-# uhhhh
+# Architecture
+The AI Agent is utilizing 4 NNs. In the game there are 4 clear distinct actions:
+1. The decision to draw a known card, or an unknown card.
+2. The decision to replace a card with the drawn card, or flip a random card.
+3. The decision to of where to place the card.
+4. The decision of which random card to flip.
+
+## Draw_Action_Model
+The draw action ai model utilizes a simple network.
+
+```py
+```
